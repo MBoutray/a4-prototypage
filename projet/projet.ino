@@ -4,6 +4,7 @@ SevSeg sevseg; //Instantiate a seven segment object
 const int led_busy = 0;
 const int led_pause = 1;
 const int button_mode = 2;
+const int defaultTimerValue = 300;
 const int clk = 16;
 const int dt = 17;
 const int interrupt0 = 16;
@@ -18,7 +19,7 @@ int room_number = 298;
 int break_time = 0;
 
 void setup() {
-  // display setup
+  // -- Display setup --
   byte numDigits = 4;
   byte digitsPins[] = {6, 7, 8, 9};
   byte segmentsPins[] = {28, 26, 10, 4, 3, 27, 12, 5};
@@ -35,21 +36,25 @@ void setup() {
 
   sevseg.setBrightness(100);
 
-  //mode switch setup
+  // -- Mode switch setup --
   pinMode(led_busy, OUTPUT);
   pinMode(led_pause, OUTPUT);
   pinMode(button_mode, INPUT);
+
+  // -- Rotary encoder setup --
   pinMode(clk, INPUT);
   pinMode(dt, INPUT);
 
   attachInterrupt(interrupt0, ClockChanged, CHANGE);
 
+  // -- Data rate setup --
   Serial.begin(9600);
 }
 
 void loop() {
   // Display logic
   if (isOnBreak) {
+    // Breaktime (s) to displayable format (mm.ss) conversion
     int minutes = break_time / 60;
     int secondes = break_time % 60;
 
@@ -66,14 +71,15 @@ void loop() {
   if(last_button_value == 0 && button_value == 1) {
     isOnBreak = !isOnBreak;
 
-    // When switch to busy mode, set default timer to 5 min
+    // When switch to break mode, set default timer to 5 min
     if(isOnBreak) {
-      break_time = 300;
+      break_time = defaultTimerValue;
     }
   }
 
   last_button_value = button_value;
 
+  // Change mode led
   if (isOnBreak) { // Break
     digitalWrite(led_busy, LOW);
     digitalWrite(led_pause, HIGH);
@@ -98,10 +104,10 @@ void loop() {
 
 void ClockChanged()
 {
-//Read the CLK pi=n level
-int clkValue = digitalRead(clk);
-//Read the DT pin level
-int dtValue = digitalRead(dt);
+  //Read the CLK pi=n level
+  int clkValue = digitalRead(clk);
+  //Read the DT pin level
+  int dtValue = digitalRead(dt);
 
   if (lastCLK != clkValue)
   {
