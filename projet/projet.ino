@@ -21,14 +21,14 @@ void setup() {
   // display setup
   byte numDigits = 4;
   byte digitsPins[] = {6, 7, 8, 9};
-  byte segmentsPins[] = {28, 26, 10, 4, 3, 27, 12};
+  byte segmentsPins[] = {28, 26, 10, 4, 3, 27, 12, 5};
   bool resistorsOnSegments = false; // 'false' means resistors are on digit pins
   byte hardwareConfig = COMMON_ANODE; // See README.md for options
   bool updateWithDelays = false; // Default 'false' is Recommended
   bool leadingZeros = true; // Use 'true' if you'd like to keep the leading zeros
   // Use 'true' if your decimal point doesn't exist or isn't connected. 
   // Then, you only need to specify 7 segmentPins[]
-  bool disableDecPoint = true;
+  bool disableDecPoint = false;
 
   sevseg.begin(hardwareConfig, numDigits, digitsPins, segmentsPins, resistorsOnSegments,
   updateWithDelays, leadingZeros, disableDecPoint);
@@ -50,7 +50,10 @@ void setup() {
 void loop() {
   
   if (mode) {
-    sevseg.setNumber(break_time, 2);
+    int minutes = break_time / 60;
+    int secondes = break_time % 60;
+
+    sevseg.setNumber(minutes * 100 + secondes, 2);
   } else {
     sevseg.setNumber(room_number, 0);
   }
