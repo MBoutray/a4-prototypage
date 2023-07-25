@@ -12,7 +12,7 @@ volatile int lastCLK = 0;
 unsigned long previousMillis = 0;
 unsigned long interval = 1000;
 
-bool mode = false; // false = busy true = break
+bool isOnBreak = false; // false = busy true = break
 int last_button_value = 0;
 int room_number = 298;
 int break_time = 0;
@@ -48,8 +48,8 @@ void setup() {
 }
 
 void loop() {
-  
-  if (mode) {
+  // Display logic
+  if (isOnBreak) {
     int minutes = break_time / 60;
     int secondes = break_time % 60;
 
@@ -60,27 +60,39 @@ void loop() {
 
   sevseg.refreshDisplay();
 
+  // Button mode switching
   int button_value = digitalRead(button_mode);
 
   if(last_button_value == 0 && button_value == 1) {
-    mode = !mode;
+    isOnBreak = !isOnBreak;
+
+    // When switch to busy mode, set default timer to 5 min
+    if(isOnBreak) {
+      break_time = 300;
+    }
   }
 
   last_button_value = button_value;
 
-  if (mode) {
-      digitalWrite(led_busy, LOW);
-      digitalWrite(led_pause, HIGH);
-  } else {
+  if (isOnBreak) { // Break
+    digitalWrite(led_busy, LOW);
+    digitalWrite(led_pause, HIGH);
+  } else { // Busy
     digitalWrite(led_busy, HIGH);
     digitalWrite(led_pause, LOW);
   }
 
+  // Timer logic
   unsigned long currentMillis = millis();
 
   if (currentMillis - previousMillis > interval) {
     previousMillis = currentMillis;
     break_time += break_time > 0 ? -1 : 0;
+
+    // When the timer reaches 0, switch to busy mode, time to work !
+    if (break_time == 0) {
+      isOnBreak = false;
+    }
   }
 }
 
@@ -94,7 +106,7 @@ int dtValue = digitalRead(dt);
   if (lastCLK != clkValue)
   {
     lastCLK = clkValue;
-    if (mode) {
+    if (isOnBreak) {
       break_time += clkValue != dtValue ? 1 : break_time > 0 ? -1 : 0;
     } else {
       room_number += clkValue != dtValue ? 1 : room_number > 0 ? -1 : 0;
