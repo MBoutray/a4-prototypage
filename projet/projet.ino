@@ -5,12 +5,15 @@
 #include <ArduinoJson.h>
 SevSeg sevseg; //Instantiate a seven segment object
 
-const int led_busy = 0;
-const int led_pause = 1;
+const int my_led_busy = 0;
+const int my_led_pause = 1;
+const int other_led_busy=15;
+const int other_led_pause=14;
 const int button_mode = 2;
 const int defaultTimerValue = 300;
 const int clk = 16;
 const int dt = 17;
+const int class_button = 18;
 const int interrupt0 = 16;
 int count = 0;
 volatile int lastCLK = 0;
@@ -21,17 +24,20 @@ unsigned long previousMillisCall = 0;
 
 
 bool isOnBreak = false; // false = busy true = break
-int last_button_value = 0;
-int room_number = 298;
-int break_time = 0;
+bool isMe = true; // false = mtd true = dev
+int last_button_mode_value = 0;
+int last_button_class_value = 0;
+int my_room_number = 298;
+int my_break_time = 0;
+int other_class_infos = 0;
+bool other_class_bool = false;
 
 // thingspeak
 const char ssid[] = "OnePlus Martin"; // Nom du réseau Wi-Fi
 const char password[] = "boumshakalaka"; // Mot de passe Wi-Fi
-const unsigned long channelID = 2227501; // Remplacez par l'ID de votre canal Thingspeak
-const char* apiKey = "Q5SIVG44AM6RV1QY"; // Remplacez par votre clé d'API Thingspeak
-int other_class_infos = 0;
-bool other_class_bool = false;
+const unsigned long channelID = 2228138; // Remplacez par l'ID de votre canal Thingspeak
+const char* apiKey = "0GWNH1LROW60G7FD"; // Remplacez par votre clé d'API Thingspeak
+
 
 WiFiClient client;
 HttpClient httpClient = HttpClient(client, "api.thingspeak.com");
@@ -58,9 +64,12 @@ void setup() {
   sevseg.setBrightness(100);
 
   // -- Mode switch setup --
-  pinMode(led_busy, OUTPUT);
-  pinMode(led_pause, OUTPUT);
+  pinMode(my_led_busy, OUTPUT);
+  pinMode(my_led_pause, OUTPUT);
+  pinMode(other_led_busy, OUTPUT);
+  pinMode(other_led_pause, OUTPUT);
   pinMode(button_mode, INPUT);
+  pinMode(class_button, INPUT);
 
   // -- Rotary encoder setup --
   pinMode(clk, INPUT);
@@ -89,52 +98,94 @@ void setup() {
 }
 
 void loop() {
-  // Display logic
-  if (isOnBreak) {
-    // Breaktime (s) to displayable format (mm.ss) conversion
-    int minutes = break_time / 60;
-    int secondes = break_time % 60;
+  if (isMe) {
+    // Display logic
+      if (isOnBreak) {
+        // Breaktime (s) to displayable format (mm.ss) conversion
+        int minutes = my_break_time / 60;
+        int secondes = my_break_time % 60;
 
-    sevseg.setNumber(minutes * 100 + secondes, 2);
+        sevseg.setNumber(minutes * 100 + secondes, 2);
+      } else {
+        sevseg.setNumber(my_room_number, 0);
+      }
   } else {
-    sevseg.setNumber(room_number, 0);
+      if (other_class_bool) {
+        // Breaktime (s) to displayable format (mm.ss) conversion
+        int minutes = other_class_infos / 60;
+        int secondes = other_class_infos % 60;
+        sevseg.setNumber(minutes * 100 + secondes, 2);
+      } else {
+        sevseg.setNumber(other_class_infos, 0);
+      }
   }
+  
 
   sevseg.refreshDisplay();
 
   // Button mode switching
   int button_value = digitalRead(button_mode);
+  int class_value = digitalRead(class_button);
 
-  if(last_button_value == 0 && button_value == 1) {
+  if(last_button_class_value == 0 && class_value == 1) {
+    isMe = !isMe;  
+  }
+
+  if(last_button_mode_value == 0 && button_value == 1 && isMe) {
     isOnBreak = !isOnBreak;
-
     // When switch to break mode, set default timer to 5 min
     if(isOnBreak) {
-      break_time = defaultTimerValue;
+      my_break_time = defaultTimerValue;
     }
   }
-
-  last_button_value = button_value;
-
-  // Change mode led
-  if (isOnBreak) { // Break
-    digitalWrite(led_busy, LOW);
-    digitalWrite(led_pause, HIGH);
-  } else { // Busy
-    digitalWrite(led_busy, HIGH);
-    digitalWrite(led_pause, LOW);
+  last_button_class_value = class_value;
+  last_button_mode_value = button_value;
+  if (isMe) {
+      digitalWrite(other_led_busy, LOW);
+      digitalWrite(other_led_pause, LOW);
+    if (isOnBreak) { // Break
+      digitalWrite(my_led_busy, LOW);
+      digitalWrite(my_led_pause, HIGH);
+    } else { // Busy
+      digitalWrite(my_led_busy, HIGH);
+      digitalWrite(my_led_pause, LOW);
+    }
+  } else {
+    Serial.println("autre classe");
+    digitalWrite(my_led_busy, LOW);
+    digitalWrite(my_led_pause, LOW);
+    if (other_class_bool) { // Break
+      Serial.println("autre classe break");
+      digitalWrite(other_led_busy, LOW);
+      digitalWrite(other_led_pause, HIGH);
+    } else { // Busy
+      Serial.println("autre classe busy");
+      digitalWrite(other_led_busy, HIGH);
+      digitalWrite(other_led_pause, LOW);
+    }
   }
+  // Change mode led
+  
+
+  
 
   // Timer logic
   unsigned long currentMillis = millis();
 
   if (currentMillis - previousMillis > interval) {
     previousMillis = currentMillis;
-    break_time += break_time > 0 ? -1 : 0;
+    my_break_time += my_break_time > 0 ? -1 : 0;
 
     // When the timer reaches 0, switch to busy mode, time to work !
-    if (break_time == 0) {
+    if (my_break_time == 0 && isMe) {
       isOnBreak = false;
+    }
+  }
+
+  if(!isMe){
+    if(other_class_bool) {
+      previousMillis = currentMillis;
+      other_class_infos += other_class_infos > 0 ? -1 : 0;
     }
   }
 
@@ -143,9 +194,9 @@ void loop() {
     // Thingspeak
     if(WiFi.status() == WL_CONNECTED) {
       if(isOnBreak){
-        ThingSpeak.setField(1, break_time);
+        ThingSpeak.setField(1,my_break_time);
       }else{
-        ThingSpeak.setField(1, room_number);
+        ThingSpeak.setField(1, my_room_number);
       }
       ThingSpeak.setField(2, isOnBreak);
       int response = ThingSpeak.writeFields(channelID, apiKey);
@@ -165,8 +216,8 @@ void loop() {
       DynamicJsonDocument doc(1024);
       deserializeJson(doc, responsehttp);
 
-      other_class_infos = doc["feeds"][0]["field3"];
-      other_class_bool = doc["feeds"][0]["field4"];
+      other_class_infos = doc["feeds"][0]["field1"];
+      other_class_bool = doc["feeds"][0]["field2"];
       Serial.println(other_class_infos);
 
       /**
@@ -200,9 +251,9 @@ void ClockChanged()
   {
     lastCLK = clkValue;
     if (isOnBreak) {
-      break_time += clkValue != dtValue ? 1 : break_time > 0 ? -1 : 0;
+      my_break_time += clkValue != dtValue ? -1 : my_break_time > 0 ? +1 : 0;
     } else {
-      room_number += clkValue != dtValue ? 1 : room_number > 0 ? -1 : 0;
+      my_room_number += clkValue != dtValue ? -1 : my_room_number > 0 ? +1 : 0;
     }
   }
 }
