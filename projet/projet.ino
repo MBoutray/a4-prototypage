@@ -156,7 +156,7 @@ void loop() {
         Serial.println("Echec de l'envoi");
       }
 
-      httpClient.get("/channels/2227501/feeds.json?api_key=WZRAUBZ3NJ5SKULM&results=1");
+      httpClient.get("/channels/2228138/feeds.json?api_key=YJSR2IQDA6XRMG7F&results=1");
       int statusCode = httpClient.responseStatusCode();
       Serial.println(statusCode);
       String responsehttp = httpClient.responseBody();
@@ -165,24 +165,9 @@ void loop() {
       DynamicJsonDocument doc(1024);
       deserializeJson(doc, responsehttp);
 
-      other_class_infos = doc["feeds"][0]["field3"];
-      other_class_bool = doc["feeds"][0]["field4"];
+      other_class_infos = doc["feeds"][0]["field1"];
+      other_class_bool = doc["feeds"][0]["field2"];
       Serial.println(other_class_infos);
-
-      /**
-      String url = "https://api.thingspeak.com/channels/2227501/feeds.json?api_key=WZRAUBZ3NJ5SKULM";
-      int httpCode = http.begin(url);
-      if(httpCode > 0) {
-      
-          int response = http.GET();
-
-          Serial.println(response);
-        
-      }
-
-      Serial.println(httpCode);
-      Serial.println(HTTP_CODE_OK);
-      **/
     }
     
   }
