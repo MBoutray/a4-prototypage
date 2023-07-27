@@ -3,12 +3,12 @@
 #include <ThingSpeak.h>
 #include <ArduinoHttpClient.h>
 #include <ArduinoJson.h>
-SevSeg sevseg; //Instantiate a seven segment object
+SevSeg sevseg;  //Instantiate a seven segment object
 
 const int my_led_busy = 0;
 const int my_led_pause = 1;
-const int other_led_busy=15;
-const int other_led_pause=14;
+const int other_led_busy = 15;
+const int other_led_pause = 14;
 const int button_mode = 2;
 const int defaultTimerValue = 300;
 const int clk = 16;
@@ -23,8 +23,8 @@ unsigned long intervalCall = 10000;
 unsigned long previousMillisCall = 0;
 
 
-bool isOnBreak = false; // false = busy true = break
-bool isMe = true; // false = mtd true = dev
+bool isOnBreak = false;  // false = busy true = break
+bool isMe = true;        // false = mtd true = dev
 int last_button_mode_value = 0;
 int last_button_class_value = 0;
 int my_room_number = 298;
@@ -33,10 +33,11 @@ int other_class_infos = 0;
 bool other_class_bool = false;
 
 // thingspeak
-const char ssid[] = "OnePlus Martin"; // Nom du réseau Wi-Fi
-const char password[] = "boumshakalaka"; // Mot de passe Wi-Fi
-const unsigned long channelID = 2228138; // Remplacez par l'ID de votre canal Thingspeak
-const char* apiKey = "0GWNH1LROW60G7FD"; // Remplacez par votre clé d'API Thingspeak
+const char ssid[] = "OnePlus Martin";     // Nom du réseau Wi-Fi
+const char password[] = "boumshakalaka";  // Mot de passe Wi-Fi
+const unsigned long channelID = 2228138;  // Remplacez par l'ID de votre canal Thingspeak
+const char* writeApiKey = "0GWNH1LROW60G7FD";  // Remplacez par votre clé d'API Thingspeak
+const char* readApiKey = "YJSR2IQDA6XRMG7F";  // Remplacez par votre clé d'API Thingspeak
 
 
 WiFiClient client;
@@ -48,18 +49,18 @@ void setup() {
 
   // -- Display setup --
   byte numDigits = 4;
-  byte digitsPins[] = {6, 7, 8, 9};
-  byte segmentsPins[] = {28, 26, 10, 4, 3, 27, 12, 5};
-  bool resistorsOnSegments = false; // 'false' means resistors are on digit pins
-  byte hardwareConfig = COMMON_ANODE; // See README.md for options
-  bool updateWithDelays = false; // Default 'false' is Recommended
-  bool leadingZeros = false; // Use 'true' if you'd like to keep the leading zeros
-  // Use 'true' if your decimal point doesn't exist or isn't connected. 
+  byte digitsPins[] = { 6, 7, 8, 9 };
+  byte segmentsPins[] = { 28, 26, 10, 4, 3, 27, 12, 5 };
+  bool resistorsOnSegments = false;    // 'false' means resistors are on digit pins
+  byte hardwareConfig = COMMON_ANODE;  // See README.md for options
+  bool updateWithDelays = false;       // Default 'false' is Recommended
+  bool leadingZeros = false;           // Use 'true' if you'd like to keep the leading zeros
+  // Use 'true' if your decimal point doesn't exist or isn't connected.
   // Then, you only need to specify 7 segmentPins[]
   bool disableDecPoint = false;
 
   sevseg.begin(hardwareConfig, numDigits, digitsPins, segmentsPins, resistorsOnSegments,
-  updateWithDelays, leadingZeros, disableDecPoint);
+               updateWithDelays, leadingZeros, disableDecPoint);
 
   sevseg.setBrightness(100);
 
@@ -100,26 +101,25 @@ void setup() {
 void loop() {
   if (isMe) {
     // Display logic
-      if (isOnBreak) {
-        // Breaktime (s) to displayable format (mm.ss) conversion
-        int minutes = my_break_time / 60;
-        int secondes = my_break_time % 60;
+    if (isOnBreak) {
+      // Breaktime (s) to displayable format (mm.ss) conversion
+      int minutes = my_break_time / 60;
+      int secondes = my_break_time % 60;
 
-        sevseg.setNumber(minutes * 100 + secondes, 2);
-      } else {
-        sevseg.setNumber(my_room_number, 0);
-      }
+      sevseg.setNumber(minutes * 100 + secondes, 2);
+    } else {
+      sevseg.setNumber(my_room_number, 0);
+    }
   } else {
-      if (other_class_bool) {
-        // Breaktime (s) to displayable format (mm.ss) conversion
-        int minutes = other_class_infos / 60;
-        int secondes = other_class_infos % 60;
-        sevseg.setNumber(minutes * 100 + secondes, 2);
-      } else {
-        sevseg.setNumber(other_class_infos, 0);
-      }
+    if (other_class_bool) {
+      // Breaktime (s) to displayable format (mm.ss) conversion
+      int minutes = other_class_infos / 60;
+      int secondes = other_class_infos % 60;
+      sevseg.setNumber(minutes * 100 + secondes, 2);
+    } else {
+      sevseg.setNumber(other_class_infos, 0);
+    }
   }
-  
 
   sevseg.refreshDisplay();
 
@@ -127,26 +127,26 @@ void loop() {
   int button_value = digitalRead(button_mode);
   int class_value = digitalRead(class_button);
 
-  if(last_button_class_value == 0 && class_value == 1) {
-    isMe = !isMe;  
+  if (last_button_class_value == 0 && class_value == 1) {
+    isMe = !isMe;
   }
 
-  if(last_button_mode_value == 0 && button_value == 1 && isMe) {
+  if (last_button_mode_value == 0 && button_value == 1 && isMe) {
     isOnBreak = !isOnBreak;
     // When switch to break mode, set default timer to 5 min
-    if(isOnBreak) {
+    if (isOnBreak) {
       my_break_time = defaultTimerValue;
     }
   }
   last_button_class_value = class_value;
   last_button_mode_value = button_value;
   if (isMe) {
-      digitalWrite(other_led_busy, LOW);
-      digitalWrite(other_led_pause, LOW);
-    if (isOnBreak) { // Break
+    digitalWrite(other_led_busy, LOW);
+    digitalWrite(other_led_pause, LOW);
+    if (isOnBreak) {  // Break
       digitalWrite(my_led_busy, LOW);
       digitalWrite(my_led_pause, HIGH);
-    } else { // Busy
+    } else {  // Busy
       digitalWrite(my_led_busy, HIGH);
       digitalWrite(my_led_pause, LOW);
     }
@@ -154,22 +154,18 @@ void loop() {
     Serial.println("autre classe");
     digitalWrite(my_led_busy, LOW);
     digitalWrite(my_led_pause, LOW);
-    if (other_class_bool) { // Break
+    if (other_class_bool) {  // Break
       Serial.println("autre classe break");
       digitalWrite(other_led_busy, LOW);
       digitalWrite(other_led_pause, HIGH);
-    } else { // Busy
+    } else {  // Busy
       Serial.println("autre classe busy");
       digitalWrite(other_led_busy, HIGH);
       digitalWrite(other_led_pause, LOW);
     }
   }
-  // Change mode led
-  
 
-  
-
-  // Timer logic
+  // -- Timer logic --
   unsigned long currentMillis = millis();
 
   if (currentMillis - previousMillis > interval) {
@@ -182,32 +178,30 @@ void loop() {
     }
   }
 
-  if(!isMe){
-    if(other_class_bool) {
-      previousMillis = currentMillis;
-      other_class_infos += other_class_infos > 0 ? -1 : 0;
-    }
+  if (!isMe && other_class_bool) {
+    previousMillis = currentMillis;
+    other_class_infos += other_class_infos > 0 ? -1 : 0;
   }
 
   if (currentMillis - previousMillisCall > intervalCall) {
     previousMillisCall = currentMillis;
     // Thingspeak
-    if(WiFi.status() == WL_CONNECTED) {
-      if(isOnBreak){
-        ThingSpeak.setField(1,my_break_time);
-      }else{
+    if (WiFi.status() == WL_CONNECTED) {
+      if (isOnBreak) {
+        ThingSpeak.setField(1, my_break_time);
+      } else {
         ThingSpeak.setField(1, my_room_number);
       }
       ThingSpeak.setField(2, isOnBreak);
-      int response = ThingSpeak.writeFields(channelID, apiKey);
+      int response = ThingSpeak.writeFields(channelID, writeApiKey);
 
-      if(response == 200) {
+      if (response == 200) {
         Serial.println("Envoi réussi");
       } else {
         Serial.println("Echec de l'envoi");
       }
 
-      httpClient.get("/channels/2228138/feeds.json?api_key=YJSR2IQDA6XRMG7F&results=1");
+      httpClient.get("/channels/" + String(channelID) + "/feeds.json?api_key=" + String(readApiKey) + "&results=1");
       int statusCode = httpClient.responseStatusCode();
       Serial.println(statusCode);
       String responsehttp = httpClient.responseBody();
@@ -220,25 +214,23 @@ void loop() {
       other_class_bool = doc["feeds"][0]["field2"];
       Serial.println(other_class_infos);
     }
-    
   }
-
 }
 
-void ClockChanged()
-{
+void ClockChanged() {
   //Read the CLK pi=n level
   int clkValue = digitalRead(clk);
   //Read the DT pin level
   int dtValue = digitalRead(dt);
 
-  if (lastCLK != clkValue)
-  {
+  if (lastCLK != clkValue) {
     lastCLK = clkValue;
     if (isOnBreak) {
-      my_break_time += clkValue != dtValue ? -1 : my_break_time > 0 ? +1 : 0;
+      my_break_time += clkValue != dtValue ? -1 : my_break_time > 0 ? +1
+                                                                    : 0;
     } else {
-      my_room_number += clkValue != dtValue ? -1 : my_room_number > 0 ? +1 : 0;
+      my_room_number += clkValue != dtValue ? -1 : my_room_number > 0 ? +1
+                                                                      : 0;
     }
   }
 }
