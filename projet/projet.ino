@@ -42,9 +42,10 @@ unsigned long releasedTime = 0;
 // thingspeak
 const char ssid[] = "OnePlus Martin";     // Nom du réseau Wi-Fi
 const char password[] = "boumshakalaka";  // Mot de passe Wi-Fi
-const unsigned long channelID = 2228138;  // Remplacez par l'ID de votre canal Thingspeak
+const unsigned long channelWriteID = 2228138;  // Remplacez par l'ID de votre canal Thingspeak
+const unsigned long channelReadID = 2227501;
 const char* writeApiKey = "0GWNH1LROW60G7FD";  // Remplacez par votre clé d'API Thingspeak
-const char* readApiKey = "YJSR2IQDA6XRMG7F";  // Remplacez par votre clé d'API Thingspeak
+const char* readApiKey = "WZRAUBZ3NJ5SKULM";  // Remplacez par votre clé d'API Thingspeak
 
 WiFiClient client;
 HttpClient httpClient = HttpClient(client, "api.thingspeak.com");
@@ -200,7 +201,7 @@ void loop() {
         ThingSpeak.setField(1, my_room_number);
       }
       ThingSpeak.setField(2, isOnBreak);
-      int response = ThingSpeak.writeFields(channelID, writeApiKey);
+      int response = ThingSpeak.writeFields(channelWriteID, writeApiKey);
 
       if (response == 200) {
         Serial.println("Envoi réussi");
@@ -208,7 +209,7 @@ void loop() {
         Serial.println("Echec de l'envoi");
       }
 
-      httpClient.get("/channels/" + String(channelID) + "/feeds.json?api_key=" + String(readApiKey) + "&results=1");
+      httpClient.get("/channels/" + String(channelReadID) + "/feeds.json?api_key=" + String(readApiKey) + "&results=1");
       int statusCode = httpClient.responseStatusCode();
       // Serial.println(statusCode);
       String responsehttp = httpClient.responseBody();
