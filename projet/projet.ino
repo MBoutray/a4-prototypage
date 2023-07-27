@@ -10,7 +10,7 @@ const int my_led_pause = 1;
 const int other_led_busy = 15;
 const int other_led_pause = 14;
 const int button_mode = 2;
-const int defaultTimerValue = 300;
+const int defaultTimerValue = 900;
 const int clk = 16;
 const int dt = 17;
 const int class_button = 18;
@@ -18,6 +18,7 @@ const int interrupt0 = 16;
 int count = 0;
 volatile int lastCLK = 0;
 unsigned long previousMillis = 0;
+unsigned long previousMillisOtherClass = 0;
 unsigned long interval = 1000;
 unsigned long intervalCall = 10000;
 unsigned long previousMillisCall = 0;
@@ -118,7 +119,7 @@ void loop() {
     }
   } else {
     if (other_class_bool) {
-      Serial.print("pause. ");
+      Serial.println("heure");
       Serial.println(other_class_infos);
       // Breaktime (s) to displayable format (mm.ss) conversion
       int minutes = other_class_infos / 60;
@@ -182,16 +183,18 @@ void loop() {
     previousMillis = currentMillis;
     my_break_time += my_break_time > 0 ? -1 : 0;
 
+    if (other_class_bool) {
+      previousMillisOtherClass = currentMillis;
+      other_class_infos += other_class_infos > 0 ? -1 : 0;
+    }
+    
     // When the timer reaches 0, switch to busy mode, time to work !
     if (my_break_time == 0 && isMe) {
       isOnBreak = false;
     }
   }
 
-  if (!isMe && other_class_bool) {
-    previousMillis = currentMillis;
-    other_class_infos += other_class_infos > 0 ? -1 : 0;
-  }
+  
 
   if (currentMillis - previousMillisCall > intervalCall) {
     previousMillisCall = currentMillis;
@@ -220,10 +223,12 @@ void loop() {
       DynamicJsonDocument doc(1024);
       deserializeJson(doc, responsehttp);
 
-      other_class_infos = doc["feeds"][0]["field1"];
+      String other_class_infos_string = String(doc["feeds"][0]["field1"]);
+      other_class_infos = other_class_infos_string.toInt();
       other_class_bool = doc["feeds"][0]["field2"] == "1" ? true : false;
       Serial.println("info get");
       Serial.println(responsehttp);
+      Serial.println(other_class_infos);
       Serial.println(other_class_bool);
     }
   }
@@ -238,10 +243,9 @@ void ClockChanged() {
   if (lastCLK != clkValue) {
     lastCLK = clkValue;
     if (isOnBreak) {
-      my_break_time += clkValue != dtValue ? -1 : my_break_time > 0 ? +1                                                        : 0;
+      my_break_time += clkValue != dtValue ? +1 : my_break_time > 0 ? -1 : 0;
     } else {
-      my_room_number += clkValue != dtValue ? -1 : my_room_number > 0 ? +1
-                                                                      : 0;
+      my_room_number += clkValue != dtValue ? +1 : my_room_number > 0 ? -1 : 0;
     }
   }
 }
