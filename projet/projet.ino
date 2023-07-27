@@ -32,6 +32,13 @@ int my_break_time = 0;
 int other_class_infos = 0;
 bool other_class_bool = false;
 
+// constants won't change. They're used here to set pin numbers:
+int LONG_PRESS_TIME  = 500; // 500 milliseconds
+
+// Variables will change
+unsigned long pressedTime  = 0;
+unsigned long releasedTime = 0;
+
 // thingspeak
 const char ssid[] = "OnePlus Martin";     // Nom du réseau Wi-Fi
 const char password[] = "boumshakalaka";  // Mot de passe Wi-Fi
@@ -39,13 +46,13 @@ const unsigned long channelID = 2228138;  // Remplacez par l'ID de votre canal T
 const char* writeApiKey = "0GWNH1LROW60G7FD";  // Remplacez par votre clé d'API Thingspeak
 const char* readApiKey = "YJSR2IQDA6XRMG7F";  // Remplacez par votre clé d'API Thingspeak
 
-
 WiFiClient client;
 HttpClient httpClient = HttpClient(client, "api.thingspeak.com");
 
 void setup() {
   // -- Data rate setup --
   Serial.begin(115200);
+  pinMode(button_mode, INPUT_PULLUP);
 
   // -- Display setup --
   byte numDigits = 4;
@@ -55,8 +62,6 @@ void setup() {
   byte hardwareConfig = COMMON_ANODE;  // See README.md for options
   bool updateWithDelays = false;       // Default 'false' is Recommended
   bool leadingZeros = false;           // Use 'true' if you'd like to keep the leading zeros
-  // Use 'true' if your decimal point doesn't exist or isn't connected.
-  // Then, you only need to specify 7 segmentPins[]
   bool disableDecPoint = false;
 
   sevseg.begin(hardwareConfig, numDigits, digitsPins, segmentsPins, resistorsOnSegments,
@@ -125,21 +130,27 @@ void loop() {
 
   // Button mode switching
   int button_value = digitalRead(button_mode);
-  int class_value = digitalRead(class_button);
 
-  if (last_button_class_value == 0 && class_value == 1) {
-    isMe = !isMe;
-  }
+  if (last_button_mode_value == 0 && button_value == 1) {
+    pressedTime = millis();
+  } else if (last_button_mode_value == 1 && button_value == 0) { // button is released
+    releasedTime = millis();
+    long pressDuration = releasedTime - pressedTime; 
 
-  if (last_button_mode_value == 0 && button_value == 1 && isMe) {
-    isOnBreak = !isOnBreak;
-    // When switch to break mode, set default timer to 5 min
-    if (isOnBreak) {
-      my_break_time = defaultTimerValue;
+    if (pressDuration > LONG_PRESS_TIME ) {
+      isMe = !isMe;   
+    } else {
+      if(isMe) {
+        isOnBreak = !isOnBreak;
+        // When switch to break mode, set default timer to 5 min
+        if(isOnBreak) {
+          my_break_time = defaultTimerValue;
+        }
+      }
     }
   }
-  last_button_class_value = class_value;
   last_button_mode_value = button_value;
+
   if (isMe) {
     digitalWrite(other_led_busy, LOW);
     digitalWrite(other_led_pause, LOW);
@@ -151,21 +162,17 @@ void loop() {
       digitalWrite(my_led_pause, LOW);
     }
   } else {
-    Serial.println("autre classe");
     digitalWrite(my_led_busy, LOW);
     digitalWrite(my_led_pause, LOW);
-    if (other_class_bool) {  // Break
-      Serial.println("autre classe break");
+    if (other_class_bool) { // Break
       digitalWrite(other_led_busy, LOW);
       digitalWrite(other_led_pause, HIGH);
-    } else {  // Busy
-      Serial.println("autre classe busy");
+    } else { // Busy
       digitalWrite(other_led_busy, HIGH);
       digitalWrite(other_led_pause, LOW);
     }
   }
-
-  // -- Timer logic --
+  // Timer logic
   unsigned long currentMillis = millis();
 
   if (currentMillis - previousMillis > interval) {
@@ -203,9 +210,9 @@ void loop() {
 
       httpClient.get("/channels/" + String(channelID) + "/feeds.json?api_key=" + String(readApiKey) + "&results=1");
       int statusCode = httpClient.responseStatusCode();
-      Serial.println(statusCode);
+      // Serial.println(statusCode);
       String responsehttp = httpClient.responseBody();
-      Serial.println(responsehttp);
+      // Serial.println(responsehttp);
 
       DynamicJsonDocument doc(1024);
       deserializeJson(doc, responsehttp);
