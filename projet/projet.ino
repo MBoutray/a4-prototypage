@@ -33,7 +33,7 @@ int other_class_infos = 0;
 bool other_class_bool = false;
 
 // constants won't change. They're used here to set pin numbers:
-int LONG_PRESS_TIME  = 500; // 500 milliseconds
+int LONG_PRESS_TIME  = 300; // 500 milliseconds
 
 // Variables will change
 unsigned long pressedTime  = 0;
@@ -118,6 +118,8 @@ void loop() {
     }
   } else {
     if (other_class_bool) {
+      Serial.print("pause. ");
+      Serial.println(other_class_infos);
       // Breaktime (s) to displayable format (mm.ss) conversion
       int minutes = other_class_infos / 60;
       int secondes = other_class_infos % 60;
@@ -200,7 +202,7 @@ void loop() {
       } else {
         ThingSpeak.setField(1, my_room_number);
       }
-      ThingSpeak.setField(2, isOnBreak);
+      ThingSpeak.setField(2, isOnBreak ? "1" : "0");
       int response = ThingSpeak.writeFields(channelWriteID, writeApiKey);
 
       if (response == 200) {
@@ -219,8 +221,10 @@ void loop() {
       deserializeJson(doc, responsehttp);
 
       other_class_infos = doc["feeds"][0]["field1"];
-      other_class_bool = doc["feeds"][0]["field2"];
-      Serial.println(other_class_infos);
+      other_class_bool = doc["feeds"][0]["field2"] == "1" ? true : false;
+      Serial.println("info get");
+      Serial.println(responsehttp);
+      Serial.println(other_class_bool);
     }
   }
 }
@@ -234,8 +238,7 @@ void ClockChanged() {
   if (lastCLK != clkValue) {
     lastCLK = clkValue;
     if (isOnBreak) {
-      my_break_time += clkValue != dtValue ? -1 : my_break_time > 0 ? +1
-                                                                    : 0;
+      my_break_time += clkValue != dtValue ? -1 : my_break_time > 0 ? +1                                                        : 0;
     } else {
       my_room_number += clkValue != dtValue ? -1 : my_room_number > 0 ? +1
                                                                       : 0;
